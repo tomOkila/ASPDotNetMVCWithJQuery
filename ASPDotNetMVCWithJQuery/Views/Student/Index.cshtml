@@ -1,0 +1,141 @@
+﻿
+@{
+    ViewBag.Title = "Student List";
+}
+
+<h2>Student Management</h2>
+<a href="#" class="btn btn-success" style="margin-bottom:10px" onclick="PopupForm('@Url.Action("AddOrEdit","Student")')">
+    <i class="fa fa-plus" aria-hidden="true"></i> Add New
+</a>
+<table id="studentTableData" class="table table-striped table-bordered" style="width:100%">
+    <thead>
+        <tr>
+            <th>FirstName</th>
+            <th>LastName</th>
+            <th>Age</th>
+            <th>Registration Date</th>
+            <th></th>
+        </tr>
+    </thead>
+</table>
+
+<!--Datatables css styling-->
+<link href="https://cdn.datatables.net/1.12.0/css/dataTables.bootstrap.min.css" rel="stylesheet" />
+
+@section scripts {
+    <script src="https://cdn.datatables.net/1.12.0/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.12.0/js/dataTables.bootstrap.min.js"></script>
+
+
+    <script>
+        var Popup, dataTable;
+        $(document).ready(function () {
+
+            $("#studentTableData").DataTable({
+                "ajax": {
+                    "url": "/Student/GetData",
+                    "type": "GET",
+                    "datatype": "json"
+                },
+
+                "columns": [
+                    { "data": "FirstName" },
+                    { "data": "LastName" },
+                    { "data": "Age" },
+                    {
+                        "data": "RegistrationDate",
+                        "render": function (data) {
+                            var pattern = /Date\(([^)]+)\)/;
+                            var results = pattern.exec(data);
+                            var dt = new Date(parseFloat(results[1])).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", hourCycle: 'h12' });
+                            return dt;
+                        }
+                    },
+                    {"data":"StudentID" , "render" : function (data) {
+                        return "<a class='btn btn-primary btn-sm' onclick=PopupForm('@Url.Action("AddOrEdit","Student")/" + data + "')><i class='fas fa-edit'></i> Edit</a><a class='btn btn-danger btn-sm' style='margin-left:5px' onclick=Delete(" + data + ")><i class='fa fa-trash'></i> Delete</a>";
+                    },
+                        "orderable": false,
+                        "searchable": false,
+                        "width": "150px"
+                    }
+                ],
+                "language": {
+
+                    "emptyTable": "No data found, Please click on <b>Add New</b> Button"
+                }
+            });
+        });
+
+
+        function PopupForm(url) {
+
+            var formDiv = $('<div/>');
+            $.get(url)
+                .done(function (response) {
+                    formDiv.html(response);
+                    Popup = formDiv.dialog({
+                        autoOpen: true,
+                        resizable: false,
+                        title: 'Fill Student Details',
+                        height: 500,
+                        width: 500,
+                        close: function () {
+                            Popup.dialog('destroy').remove();
+                        }
+
+                    });
+                });
+        }
+
+        function SubmitForm(form) {
+            $.validator.unobtrusive.parse(form);
+            if ($(form).valid()) {
+                $.ajax({
+                    type: "POST",
+                    url: form.action,
+                    data: $(form).serialize(),
+                    success: function (data) {
+                        if (data.success) {
+                            Popup.dialog('close');
+                            //reload the datatable
+                            $('#studentTableData').DataTable().ajax.reload()
+
+                            $.notify(data.message, {
+                                globalPosition: "top center",
+                                className: "success"
+                            })
+
+                        }
+                    }
+                });
+            }
+            return false;
+        }
+
+        function Delete(id) {
+            if(confirm('Are You Sure to Delete this Employee Record ?'))
+            {
+                $.ajax({
+                    type: "POST",
+                     url: '@Url.Action("Delete","Student")/'+ id,
+                    success: function (data) {
+                        if (data.success)
+                        {
+                            //reload the datatable
+                            $('#studentTableData').DataTable().ajax.reload()
+
+                            //display the notify message.
+                            $.notify(data.message, {
+                                globalPosition: "top center",
+                                className: "success"
+                            })
+
+                        }
+                    }
+
+                });
+            }
+        }
+
+    </script>
+}
